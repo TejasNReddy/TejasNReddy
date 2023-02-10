@@ -1,0 +1,56 @@
+#include <ESP8266WiFi.h>
+#include <Adafruit_Fingerprint.h>
+
+const char* ssid = "your_WiFi_SSID";
+const char* password = "your_WiFi_password";
+
+Adafruit_Fingerprint finger = Adafruit_Fingerprint(&Serial1);
+
+void setup() {
+  Serial.begin(115200);
+  WiFi.begin(ssid, password);
+  
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.println("Connecting to WiFi...");
+  }
+  
+  Serial.println("Connected to WiFi");
+  Serial1.begin(57600);
+  
+  if (finger.verifyPassword()) {
+    Serial.println("Found fingerprint sensor!");
+  } else {
+    Serial.println("Did not find fingerprint sensor :(");
+    while (1) { delay(1); }
+  }
+  
+  finger.getTemplateCount();
+  Serial.print("Sensor contains "); 
+  Serial.print(finger.templateCount); 
+  Serial.println(" templates");
+  Serial.println("Waiting for valid finger...");
+}
+
+void loop() {
+  uint8_t id = finger.getImage();
+  if (id != FINGERPRINT_OK) {
+    Serial.println("Could not get image");
+    return;
+  }
+  
+  id = finger.image2Tz();
+  if (id != FINGERPRINT_OK) {
+    Serial.println("Could not convert image to character stream");
+    return;
+  }
+  
+  id = finger.fingerFastSearch();
+  if (id < 200) {
+    Serial.print("Found template at #"); 
+    Serial.println(id);
+    // Send unlock signal to PC
+  } else {
+    Serial.println("Did not find match");
+  }
+}
